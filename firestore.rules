@@ -1,0 +1,159 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity validations
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'email']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.email is string && data.email.size() <= 256 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 512)) &&
+        (!('hskLevel' in data) || (data.hskLevel is string && data.hskLevel.size() <= 16));
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasAll(['id', 'userId', 'topic', 'level']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.topic is string && data.topic.size() <= 64 &&
+        data.level is string && data.level.size() <= 16 &&
+        (!('topicTitleZh' in data) || (data.topicTitleZh is string && data.topicTitleZh.size() <= 128)) &&
+        (!('teacher' in data) || (data.teacher is string && data.teacher.size() <= 64)) &&
+        (!('teacherNameZh' in data) || (data.teacherNameZh is string && data.teacherNameZh.size() <= 64));
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'sessionId', 'userId', 'role', 'chinese']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.sessionId is string && data.sessionId.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        (data.role == 'user' || data.role == 'assistant') &&
+        data.chinese is string && data.chinese.size() <= 2000 &&
+        (!('pinyin' in data) || (data.pinyin is string && data.pinyin.size() <= 2000)) &&
+        (!('translation' in data) || (data.translation is string && data.translation.size() <= 2000));
+    }
+
+    function isValidVocabulary(data) {
+      return data.keys().hasAll(['id', 'userId', 'word', 'pinyin', 'meaningVi']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.word is string && data.word.size() <= 64 &&
+        data.pinyin is string && data.pinyin.size() <= 128 &&
+        data.meaningVi is string && data.meaningVi.size() <= 256 &&
+        (!('hskLevel' in data) || (data.hskLevel is string && data.hskLevel.size() <= 16)) &&
+        (!('exampleZh' in data) || (data.exampleZh is string && data.exampleZh.size() <= 512));
+    }
+
+    function isValidProgress(data) {
+      return data.keys().hasAll(['userId']) &&
+        data.userId is string && data.userId == request.auth.uid &&
+        (!('targetHskLevel' in data) || (data.targetHskLevel is string && data.targetHskLevel.size() <= 16));
+    }
+
+    function isValidFlashcard(data) {
+      return data.keys().hasAll(['id', 'userId', 'word', 'normalizedWord', 'pinyin', 'meaning']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.word is string && data.word.size() <= 64 &&
+        data.normalizedWord is string && data.normalizedWord.size() <= 64 &&
+        data.pinyin is string && data.pinyin.size() <= 128 &&
+        data.meaning is string && data.meaning.size() <= 512;
+    }
+
+    function isValidFlashcardReview(data) {
+      return data.keys().hasAll(['result', 'reviewedAt']) &&
+        data.result in ['again', 'hard', 'good', 'easy'];
+    }
+
+    // 1. Users collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming());
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Flashcards subcollection
+      match /flashcards/{flashcardId} {
+        allow get: if isOwner(userId) && isValidId(flashcardId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(flashcardId) && isValidFlashcard(incoming());
+        allow update: if isOwner(userId) && isValidId(flashcardId) && isValidFlashcard(incoming());
+        allow delete: if isOwner(userId) && isValidId(flashcardId);
+
+        // Reviews subcollection
+        match /reviews/{reviewId} {
+          allow get: if isOwner(userId) && isValidId(reviewId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && isValidId(reviewId) && isValidFlashcardReview(incoming());
+          allow delete: if isOwner(userId) && isValidId(reviewId);
+        }
+      }
+
+      // User Settings subcollection
+      match /settings/{settingId} {
+        allow read, write: if isOwner(userId) && isValidId(settingId);
+      }
+    }
+
+    // 2. Sessions collection
+    match /sessions/{sessionId} {
+      allow get: if isSignedIn() && isValidId(sessionId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(sessionId) && isValidSession(incoming());
+      allow update: if isSignedIn() && isValidId(sessionId) && existing().userId == request.auth.uid && incoming().userId == request.auth.uid && isValidSession(incoming());
+      allow delete: if isSignedIn() && isValidId(sessionId) && existing().userId == request.auth.uid;
+
+      // 3. Messages subcollection
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(messageId) && existing().userId == request.auth.uid;
+        allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+        allow create: if isSignedIn() && isValidId(messageId) && isValidMessage(incoming()) && exists(/databases/$(database)/documents/sessions/$(sessionId));
+        allow delete: if isSignedIn() && isValidId(messageId) && existing().userId == request.auth.uid;
+      }
+    }
+
+    // 4. Vocabulary collection
+    match /vocabulary/{vocabularyId} {
+      allow get: if isSignedIn() && isValidId(vocabularyId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(vocabularyId) && isValidVocabulary(incoming());
+      allow update: if isSignedIn() && isValidId(vocabularyId) && existing().userId == request.auth.uid && incoming().userId == request.auth.uid && isValidVocabulary(incoming());
+      allow delete: if isSignedIn() && isValidId(vocabularyId) && existing().userId == request.auth.uid;
+    }
+
+    // 5. Progress collection
+    match /progress/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidProgress(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidProgress(incoming());
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+  }
+}

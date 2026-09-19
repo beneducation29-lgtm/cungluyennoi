@@ -1,0 +1,164 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with display name, learning target, and settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "hskLevel": { "type": "string", "maxLength": 16 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email"]
+    },
+    "SpeakingSession": {
+      "title": "Speaking Session",
+      "description": "Conversation practice session history record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "topic": { "type": "string", "maxLength": 64 },
+        "topicTitleZh": { "type": "string", "maxLength": 128 },
+        "level": { "type": "string", "maxLength": 16 },
+        "mode": { "type": "string", "maxLength": 32 },
+        "teacher": { "type": "string", "maxLength": 64 },
+        "teacherNameZh": { "type": "string", "maxLength": 64 },
+        "durationSeconds": { "type": "number" },
+        "startTime": { "type": "number" },
+        "endTime": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "topic", "level"]
+    },
+    "SessionMessage": {
+      "title": "Session Message",
+      "description": "Single turn message inside a speaking session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "sessionId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "chinese": { "type": "string", "maxLength": 2000 },
+        "pinyin": { "type": "string", "maxLength": 2000 },
+        "translation": { "type": "string", "maxLength": 2000 },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "sessionId", "userId", "role", "chinese"]
+    },
+    "VocabularyItem": {
+      "title": "Vocabulary Item",
+      "description": "Learned Chinese vocabulary saved by student",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "word": { "type": "string", "maxLength": 64 },
+        "pinyin": { "type": "string", "maxLength": 128 },
+        "meaningVi": { "type": "string", "maxLength": 256 },
+        "hskLevel": { "type": "string", "maxLength": 16 },
+        "exampleZh": { "type": "string", "maxLength": 512 },
+        "examplePy": { "type": "string", "maxLength": 512 },
+        "exampleVi": { "type": "string", "maxLength": 512 },
+        "savedAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "word", "pinyin", "meaningVi"]
+    },
+    "LearningProgress": {
+      "title": "Learning Progress",
+      "description": "Student aggregate speaking metrics and progress summary",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "totalSessions": { "type": "number" },
+        "totalDurationSeconds": { "type": "number" },
+        "totalWordsLearned": { "type": "number" },
+        "targetHskLevel": { "type": "string", "maxLength": 16 },
+        "averagePronunciation": { "type": "number" },
+        "lastPracticedAt": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId"]
+    },
+    "Flashcard": {
+      "title": "Flashcard",
+      "description": "Spaced repetition flashcard automatically generated from speaking sessions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "word": { "type": "string", "maxLength": 64 },
+        "normalizedWord": { "type": "string", "maxLength": 64 },
+        "pinyin": { "type": "string", "maxLength": 128 },
+        "meaning": { "type": "string", "maxLength": 256 },
+        "exampleSentence": { "type": "string", "maxLength": 512 },
+        "examplePinyin": { "type": "string", "maxLength": 512 },
+        "exampleTranslation": { "type": "string", "maxLength": 512 },
+        "hskLevel": { "type": "string", "maxLength": 16 },
+        "partOfSpeech": { "type": "string", "maxLength": 32 },
+        "topic": { "type": "string", "maxLength": 64 },
+        "difficulty": { "type": "string", "maxLength": 32 },
+        "sourceSessionId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "correctCount": { "type": "number" },
+        "incorrectCount": { "type": "number" },
+        "easeFactor": { "type": "number" },
+        "interval": { "type": "number" },
+        "repetitions": { "type": "number" },
+        "nextReviewAt": { "type": "number" },
+        "status": { "type": "string", "enum": ["new", "learning", "review", "mastered"] }
+      },
+      "required": ["id", "userId", "word", "normalizedWord", "pinyin", "meaning", "nextReviewAt", "status"]
+    },
+    "FlashcardReview": {
+      "title": "Flashcard Review History",
+      "description": "Individual review attempt record for spaced repetition analysis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "result": { "type": "string", "enum": ["again", "hard", "good", "easy"] },
+        "reviewedAt": { "type": "number" },
+        "previousInterval": { "type": "number" },
+        "newInterval": { "type": "number" }
+      },
+      "required": ["result", "reviewedAt", "previousInterval", "newInterval"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile records indexed by userId"
+    },
+    "/users/{userId}/flashcards/{flashcardId}": {
+      "schema": { "$ref": "#/entities/Flashcard" },
+      "description": "Spaced repetition flashcards owned by user"
+    },
+    "/users/{userId}/flashcards/{flashcardId}/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/FlashcardReview" },
+      "description": "Review history log for flashcard"
+    },
+    "/sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/SpeakingSession" },
+      "description": "Speaking practice sessions"
+    },
+    "/sessions/{sessionId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/SessionMessage" },
+      "description": "Turn-by-turn chat messages within a session"
+    },
+    "/vocabulary/{vocabularyId}": {
+      "schema": { "$ref": "#/entities/VocabularyItem" },
+      "description": "User saved vocabulary bank"
+    },
+    "/progress/{userId}": {
+      "schema": { "$ref": "#/entities/LearningProgress" },
+      "description": "User learning statistics and progress counters"
+    }
+  }
+}

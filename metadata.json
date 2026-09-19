@@ -1,0 +1,6 @@
+{
+  "name": "中文AI口语室 - Chinese AI Speaking Room",
+  "description": "Phòng luyện nói tiếng Trung AI thông minh dành cho người Việt với giáo viên ảo, sửa lỗi phát âm và luyện phản xạ HSK.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
