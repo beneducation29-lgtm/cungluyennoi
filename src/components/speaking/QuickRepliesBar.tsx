@@ -54,19 +54,8 @@ export const QuickRepliesBar: React.FC<QuickRepliesBarProps> = ({
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium overflow-hidden">
           <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-          <span className="font-semibold text-indigo-950 shrink-0">Câu hỏi gợi ý:</span>
-          {followUpQuestion ? (
-            <span className="truncate text-slate-800 font-['Noto_Sans_SC']">
-              {followUpQuestion.zh}
-              {followUpQuestion.vi && (
-                <span className="hidden sm:inline text-slate-500 font-normal ml-1.5 text-[11px]">
-                  ({followUpQuestion.vi})
-                </span>
-              )}
-            </span>
-          ) : (
-            <span className="text-slate-500 italic text-[11px]">Chọn mẫu câu bên dưới hoặc nói tự do</span>
-          )}
+          <span className="font-semibold text-indigo-950 shrink-0">Gợi ý câu trả lời:</span>
+          <span className="text-slate-500 italic text-[11px] truncate">Chọn mẫu câu bên dưới hoặc nói tự do</span>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">

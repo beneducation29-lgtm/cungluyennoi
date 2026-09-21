@@ -212,10 +212,8 @@ export function useSpeakingSession({
           );
         }
 
-        // Update smart follow-up question and suggestions for next turn
-        if (response.followUpQuestion) {
-          setLatestFollowUp(response.followUpQuestion);
-        }
+        // Update suggestions for next turn
+        setLatestFollowUp(null);
         if (response.suggestions && response.suggestions.length > 0) {
           setLatestSuggestions(response.suggestions);
         }
@@ -257,7 +255,7 @@ export function useSpeakingSession({
             });
         }
 
-        // Append teacher Chinese reply to transcript
+        // Append teacher Chinese reply to transcript (strictly 1 turn, at most 1 question inside reply)
         const assistantMsg: Message = {
           id: `ai-${Date.now()}`,
           role: "assistant",
@@ -265,7 +263,6 @@ export function useSpeakingSession({
           pinyin: response.pinyin,
           translation: response.translation,
           timestamp: Date.now(),
-          followUpQuestion: response.followUpQuestion,
           suggestions: response.suggestions,
           difficultyFeedback: response.difficultyFeedback,
         };

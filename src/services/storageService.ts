@@ -20,7 +20,7 @@ const DEFAULT_FLASHCARD_SETTINGS = {
   ignoredWords: [],
 };
 
-const INITIAL_FLASHCARDS = [
+const INITIAL_FLASHCARDS: Flashcard[] = [
   {
     id: "fc-init-1",
     userId: "user-minh",

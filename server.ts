@@ -63,11 +63,21 @@ CORE PEDAGOGICAL PHILOSOPHY:
 You are not a dry informational chatbot. You are an authentic Mandarin speaking teacher and situational role-play partner whose #1 goal is maximizing LEARNER PARTICIPATION (student speaks 70-80% of the time).
 
 CRITICAL RULES:
-1. ROLE-PLAY & SPOKEN AUTHENTICITY:
-   - In the spoken "reply", speak natural, authentic spoken Mandarin Chinese (口语).
+1. STRICT TURN-BY-TURN SINGLE-QUESTION CONVERSATION FLOW:
+   - In each turn, provide your response in "reply".
+   - The conversation flow MUST be strictly turn-by-turn:
+     Step a: Understand what the student said in their message ("${studentMessage}").
+     Step b: Give a brief, natural reaction or acknowledgment to the student's answer (1 short sentence).
+     Step c: Ask at most ONE natural question directly based on what the student just answered to continue the dialogue.
+   - MANDATORY: Each AI turn has at most ONE question in total.
+   - The question MUST be part of "reply" at the end.
+   - "question": The exact single question string inside "reply" (or empty if no question).
+   - STRICTLY FORBIDDEN: Do NOT create any second or pre-generated follow-up question outside "reply".
+   - AI MUST wait for the user to answer before creating the next question.
+   - The next question must be based on the student's answer, not an unrelated pre-set list.
+   - Speak natural, authentic spoken Mandarin Chinese (口语).
    - Use common spoken particles naturally (好的、嗯、对、呢、吧、呀、哦、哎).
-   - If in Role Play mode (${conversationMode}), STAY COMPLETELY IN CHARACTER inside "reply" (e.g. barista, hotel front desk, doctor, friend, shop owner). Do NOT break character or say "As an AI language tutor...".
-   - Keep your spoken "reply" concise: 1 to 2 short sentences acknowledging the student, followed by exactly ONE engaging follow-up question.
+   - If in Role Play mode (${conversationMode}), STAY COMPLETELY IN CHARACTER inside "reply" (e.g. barista, hotel front desk, doctor, friend, shop owner). Do NOT break character.
 
 2. HSK-AWARE DIFFICULTY ADAPTATION:
    - Calibrate vocabulary and grammar strictly to ${targetLevel}:
@@ -97,7 +107,7 @@ CRITICAL RULES:
    - If the student indicates they don't know what to say (e.g., "我不知道", "不懂", "bù zhīdào", "bí từ", "help", silence, or hesitation):
      * In your spoken "reply", be warm and reassuring: "没关系，慢慢来！你可以这样回答... (Không sao đâu, từ từ nhé!)".
      * Offer 2 simple choices to guide them back into the conversation.
-   - In EVERY turn, provide 3 practical "suggestions" for what the student could say next:
+   - In EVERY turn, provide 3 practical "suggestions" for what the student could say next to answer the question:
      * Option 1 ("simple"): An easy, short response strictly within ${targetLevel}.
      * Option 2 ("detailed"): A slightly longer, more expressive response.
      * Option 3 ("question"): A natural follow-up question or clarification back to the teacher (e.g., "请问...是什么意思？", "你觉得呢？").
@@ -125,8 +135,8 @@ CRITICAL RULES:
      * "priority": "high" (essential topic/struggle word), "medium" (good conversational word), or "low" (optional).
 
 7. ACCURATE PINYIN & NATURAL VIETNAMESE:
-   - Provide accurate tone-marked Pinyin for your reply and follow-up question.
-   - Provide natural, idiomatic Vietnamese translations for the reply and follow-up question.
+   - Provide accurate tone-marked Pinyin for your entire "reply".
+   - Provide natural, idiomatic Vietnamese translation for your entire "reply".
 
 You MUST respond strictly with a valid JSON object matching the requested schema.`;
 
@@ -173,9 +183,10 @@ Respond as ${teacherName} in valid JSON matching the schema:`;
             responseSchema: {
               type: Type.OBJECT,
               properties: {
-                reply: { type: Type.STRING, description: "Authentic Chinese response in simplified characters" },
-                pinyin: { type: Type.STRING, description: "Accurate Pinyin with tone marks for the reply" },
-                translation: { type: Type.STRING, description: "Natural Vietnamese translation of the reply" },
+                reply: { type: Type.STRING, description: "Authentic Chinese response in simplified characters. A short reaction followed by at most ONE question based directly on student's answer." },
+                pinyin: { type: Type.STRING, description: "Accurate Pinyin with tone marks for the full reply" },
+                translation: { type: Type.STRING, description: "Natural Vietnamese translation of the full reply" },
+                question: { type: Type.STRING, description: "The single question asked in reply (must be part of reply), or empty string if no question" },
                 hasCorrection: { type: Type.BOOLEAN, description: "True only if student made a real mistake that was corrected" },
                 correction: {
                   type: Type.OBJECT,
@@ -188,19 +199,9 @@ Respond as ${teacherName} in valid JSON matching the schema:`;
                     errorType: { type: Type.STRING, description: "Category of error in Vietnamese, e.g. Trật tự từ, Lượng từ, Ngữ pháp, Dùng từ" },
                   },
                 },
-                followUpQuestion: {
-                  type: Type.OBJECT,
-                  description: "Natural follow-up question to keep the student speaking",
-                  properties: {
-                    zh: { type: Type.STRING, description: "Question in Chinese" },
-                    py: { type: Type.STRING, description: "Pinyin with tone marks" },
-                    vi: { type: Type.STRING, description: "Vietnamese translation" },
-                  },
-                  required: ["zh", "py", "vi"],
-                },
                 suggestions: {
                   type: Type.ARRAY,
-                  description: "3 smart suggestions for what the student could say next",
+                  description: "3 smart suggestions for what the student could say next to answer the question",
                   items: {
                     type: Type.OBJECT,
                     properties: {
@@ -235,7 +236,7 @@ Respond as ${teacherName} in valid JSON matching the schema:`;
                 difficultyFeedback: { type: Type.STRING, description: "Short encouragement or adaptive feedback in Vietnamese" },
                 difficulty: { type: Type.STRING, description: "Target level, e.g. HSK 2" },
               },
-              required: ["reply", "pinyin", "translation", "vocabulary", "followUpQuestion", "suggestions"],
+              required: ["reply", "pinyin", "translation", "vocabulary", "suggestions"],
             },
           },
         });

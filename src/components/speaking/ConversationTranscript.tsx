@@ -157,36 +157,6 @@ export const ConversationTranscript: React.FC<ConversationTranscriptProps> = ({
                     {msg.translation}
                   </p>
                 )}
-
-                {/* Dedicated Follow-up Question Box for AI teacher turns */}
-                {!isUser && msg.followUpQuestion && (
-                  <div className="mt-3 p-2.5 rounded-xl bg-indigo-50/70 border border-indigo-100 text-xs">
-                    <div className="flex items-center justify-between text-indigo-900 font-semibold mb-1">
-                      <span className="flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-indigo-600" />
-                        <span>Câu hỏi tiếp nối của giáo viên:</span>
-                      </span>
-                      <button
-                        onClick={() => onPlayAudio(msg.followUpQuestion!.zh)}
-                        className="p-1 text-indigo-600 hover:text-indigo-800"
-                        title="Nghe câu hỏi"
-                      >
-                        <Volume2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <p className="font-['Noto_Sans_SC'] font-bold text-slate-900 text-sm">
-                      {msg.followUpQuestion.zh}
-                    </p>
-                    {displayMode !== "chinese-only" && msg.followUpQuestion.py && (
-                      <p className="text-[11px] text-slate-500 mt-0.5">{msg.followUpQuestion.py}</p>
-                    )}
-                    {displayMode === "full" && msg.followUpQuestion.vi && (
-                      <p className="text-[11px] text-indigo-700 italic mt-0.5">
-                        {msg.followUpQuestion.vi}
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
 

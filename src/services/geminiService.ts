@@ -15,6 +15,7 @@ export interface AIResponsePayload {
   reply: string;
   pinyin: string;
   translation: string;
+  question?: string;
   correction?: SentenceCorrection;
   vocabulary: VocabularyItem[];
   followUpQuestion?: FollowUpQuestion;
@@ -152,20 +153,10 @@ class GeminiService {
             });
           }
 
-          // Parse follow-up question
-          let followUp: FollowUpQuestion | undefined = undefined;
-          if (d.followUpQuestion && typeof d.followUpQuestion === "object" && d.followUpQuestion.zh) {
-            followUp = {
-              zh: String(d.followUpQuestion.zh).trim(),
-              py: d.followUpQuestion.py ? String(d.followUpQuestion.py).trim() : "",
-              vi: d.followUpQuestion.vi ? String(d.followUpQuestion.vi).trim() : "",
-            };
-          } else if (typeof d.followUpQuestion === "string" && d.followUpQuestion.trim()) {
-            followUp = {
-              zh: d.followUpQuestion.trim(),
-              py: "",
-              vi: "",
-            };
+          // Extract single question if provided inside or with reply
+          let singleQuestion: string | undefined = undefined;
+          if (d.question && typeof d.question === "string" && d.question.trim()) {
+            singleQuestion = d.question.trim();
           }
 
           // Parse suggestions for next student turn (conversation recovery)
@@ -187,9 +178,10 @@ class GeminiService {
             reply: d.reply.trim(),
             pinyin: d.pinyin.trim(),
             translation: d.translation.trim(),
+            question: singleQuestion,
             correction: correctionItem,
             vocabulary: vocabItems,
-            followUpQuestion: followUp,
+            followUpQuestion: undefined,
             suggestions: suggestionsList.length > 0 ? suggestionsList : undefined,
             difficultyFeedback: d.difficultyFeedback ? String(d.difficultyFeedback).trim() : undefined,
             difficulty: d.difficulty || level,
@@ -235,11 +227,7 @@ class GeminiService {
         reply: "没关系，慢慢来！不用紧张。你可以试着说：“我想喝茶” 或者问我：“有什么推荐吗？”。你选哪一个？",
         pinyin: "Méi guānxi, mànman lái! Bú yòng jǐnzhāng. Nǐ kěyǐ shì zhe shuō: 'Wǒ xiǎng hē chá' huòzhě wèn wǒ: 'Yǒu shénme tuījiàn ma?'. Nǐ xuǎn nǎ yí gè?",
         translation: "Không sao cả, từ từ nhé! Đừng căng thẳng. Bạn có thể thử nói: 'Tôi muốn uống trà' hoặc hỏi tôi: 'Có món gì gợi ý không?'. Bạn chọn câu nào?",
-        followUpQuestion: {
-          zh: "你选哪一个句子练习一下？",
-          py: "Nǐ xuǎn nǎ yí gè jùzi liànxí yíxià?",
-          vi: "Bạn chọn câu nào để luyện tập thử một chút?",
-        },
+        question: "你选哪一个？",
         suggestions: [
           {
             zh: "我想喝茶。",
@@ -313,11 +301,7 @@ class GeminiService {
         reply: "太棒了！和朋友一起看电影是一种很舒适的放松方式。你平时喜欢看什么类型的电影？喜剧片还是动作片？",
         pinyin: "Tài bàng le! Hé péngyou yìqǐ kàn diànyǐng shì yì zhǒng hěn shūshi de fàngsōng fāngshì. Nǐ píngshí xǐhuan kàn shénme lèixíng de diànyǐng? Xǐjùpiàn háishi dòngzuòpiàn?",
         translation: "Tuyệt quá! Cùng bạn bè đi xem phim là một cách thư giãn rất thoải mái. Thường ngày bạn thích xem thể loại phim nào? Phim hài hay phim hành động?",
-        followUpQuestion: {
-          zh: "你最喜欢在哪家电影院看电影？",
-          py: "Nǐ zuì xǐhuan zài nǎ jiā diànyǐngyuàn kàn diànyǐng?",
-          vi: "Bạn thích xem phim ở rạp chiếu phim nào nhất?",
-        },
+        question: "你平时喜欢看什么类型的电影？喜剧片还是动作片？",
         suggestions: [
           {
             zh: "我比较喜欢看喜剧片，很搞笑。",
@@ -394,11 +378,7 @@ class GeminiService {
         reply: "我也很喜欢喝咖啡！一杯浓郁的咖啡能让人精神充沛。你喜欢美式咖啡还是拿铁咖啡？",
         pinyin: "Wǒ yě hěn xǐhuan hē kāfēi! Yì bēi nóngyù de kāfēi néng ràng rén jīngshén chōngpèi. Nǐ xǐhuan Měishì kāfēi háishi Nátiě kāfēi?",
         translation: "Tôi cũng rất thích uống cà phê! Một ly cà phê đậm đà giúp tinh thần sảng khoái. Bạn thích cà phê Americano hay Latte?",
-        followUpQuestion: {
-          zh: "你平时喜欢喝热咖啡还是冰咖啡？",
-          py: "Nǐ píngshí xǐhuan hē rè kāfēi háishi bīng kāfēi?",
-          vi: "Bình thường bạn thích uống cà phê nóng hay cà phê đá?",
-        },
+        question: "你喜欢美式咖啡还是拿铁咖啡？",
         suggestions: [
           {
             zh: "我更喜欢喝冰拿铁。",
@@ -452,7 +432,7 @@ class GeminiService {
         translation: step.translation,
         correction: step.correction,
         vocabulary: step.vocabulary,
-        followUpQuestion: step.followUpQuestion,
+        followUpQuestion: undefined,
         suggestions: step.suggestions,
         difficultyFeedback: step.difficultyFeedback,
         difficulty: level,
@@ -468,7 +448,7 @@ class GeminiService {
       pinyin: gen.pinyin,
       translation: gen.translation,
       vocabulary: gen.vocabulary,
-      followUpQuestion: gen.followUpQuestion,
+      followUpQuestion: undefined,
       suggestions: gen.suggestions,
       difficulty: level,
       isDemo: true,
