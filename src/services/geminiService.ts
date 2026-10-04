@@ -28,6 +28,7 @@ export interface AIResponsePayload {
 
 class GeminiService {
   private turnCounter = 0;
+  private recentDemoReplies: string[] = [];
 
   /**
    * Check if Gemini API is configured and accessible on the server
@@ -197,6 +198,30 @@ class GeminiService {
 
     // Fallback to rich Demo Mode simulation
     const fallback = this.simulateDemoReply(studentMessage, topic, teacher, level);
+    if (this.recentDemoReplies.includes(fallback.reply)) {
+      const alternatives = [
+        "嗯，我明白你的意思了。你可以再告诉我一点细节吗？我很想听听你的想法。",
+        "原来是这样！这个回答让我有点好奇。你为什么会这么想呢？",
+        "听起来很有意思。我们换一个角度聊聊，你觉得最特别的地方是什么？",
+      ];
+      const alternative = alternatives.find((reply) => !this.recentDemoReplies.includes(reply));
+      if (alternative) {
+        fallback.reply = alternative;
+        fallback.pinyin = alternative === alternatives[0]
+          ? "Ń, wǒ míngbái nǐ de yìsi le. Nǐ kěyǐ zài gàosu wǒ yìdiǎn xìjié ma? Wǒ hěn xiǎng tīngting nǐ de xiǎngfǎ."
+          : alternative === alternatives[1]
+          ? "Yuánlái shì zhèyàng! Zhège huídá ràng wǒ yǒudiǎn hǎoqí. Nǐ wèishénme huì zhème xiǎng ne?"
+          : "Tīng qǐlái hěn yǒuyìsi. Wǒmen huàn yí ge jiǎodù liáoliáo, nǐ juéde zuì tèbié de dìfang shì shénme?";
+        fallback.translation = alternative === alternatives[0]
+          ? "Ừ, cô hiểu ý em rồi. Em kể thêm cho cô một chút chi tiết được không? Cô rất muốn nghe suy nghĩ của em."
+          : alternative === alternatives[1]
+          ? "Ra là vậy! Câu trả lời của em làm cô hơi tò mò. Vì sao em lại nghĩ như vậy?"
+          : "Nghe thú vị đấy. Mình thử đổi góc nhìn một chút nhé, em thấy điều gì đặc biệt nhất?";
+        fallback.question = alternative.split("。").find((part) => part.includes("？")) || "";
+        fallback.suggestions = [];
+      }
+    }
+    this.recentDemoReplies = [...this.recentDemoReplies, fallback.reply].slice(-6);
     fallback.statusNotice = "Đang dùng phản hồi mẫu (Demo) do mạng hoặc quá tải tạm thời.";
     return fallback;
   }
@@ -457,6 +482,7 @@ class GeminiService {
 
   public resetTurnCounter() {
     this.turnCounter = 0;
+    this.recentDemoReplies = [];
   }
 }
 
