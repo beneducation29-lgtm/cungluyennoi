@@ -6,7 +6,7 @@ export const TEACHERS: AITeacher[] = [
     name: "林老师",
     pinyin: "Lín Lǎoshī",
     role: "Friendly Mandarin Teacher",
-    avatar: "https://images.pexels.com/photos/20155778/pexels-photo-20155778.jpeg?cs=srgb&dl=pexels-cromwell-ken-71366571-20155778.jpg&fm=jpg",
+    avatar: "/lin-tutor-avatar.webp",
     description: "Giáo viên tiếng Trung thân thiện và chu đáo, luôn kiên nhẫn sửa lỗi phát âm và tạo tâm lý thoải mái cho học viên mới bắt đầu.",
     teachingStyle: "Nói chậm rãi, chuẩn giọng Bắc Kinh, sử dụng từ vựng dễ hiểu và động viên liên tục.",
     recommendedLevels: "Beginner → HSK 3",
