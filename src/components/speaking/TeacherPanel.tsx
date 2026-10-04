@@ -74,7 +74,7 @@ export const TeacherPanel: React.FC<TeacherPanelProps> = ({
           <img
             src={teacher.avatar}
             alt={teacher.name}
-            className="w-16 h-16 rounded-2xl object-cover border-2 border-indigo-200 shadow-sm"
+            className="w-28 h-36 rounded-2xl object-cover border-2 border-indigo-200 shadow-sm"
           />
           <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-indigo-600 text-white shadow-xs">
             <Sparkles className="w-3 h-3" />
