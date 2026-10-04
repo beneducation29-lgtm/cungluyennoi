@@ -11,6 +11,28 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
 
+function normalizeForComparison(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[，。！？、,.!?：:；;“”"‘’'（）()\s]/g, "")
+    .trim();
+}
+
+function isNearDuplicate(candidate: string, previousReplies: string[]): boolean {
+  const normalized = normalizeForComparison(candidate);
+  if (!normalized || normalized.length < 8) return false;
+
+  return previousReplies.some((previous) => {
+    const prior = normalizeForComparison(previous);
+    if (!prior) return false;
+    if (prior === normalized) return true;
+    if (normalized.length >= 12 && prior.length >= 12) {
+      return normalized.includes(prior) || prior.includes(normalized);
+    }
+    return false;
+  });
+}
+
 // Check API status & capabilities
 app.get("/api/health", (_req, res) => {
   const hasKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY");
@@ -220,7 +242,61 @@ Respond as ${teacherName} in valid JSON matching the schema:`;
             },
           },
         });
-        if (response && response.text) break;
+        if (response && response.text) {
+          try {
+            const candidate = JSON.parse(response.text);
+            if (candidate?.reply && isNearDuplicate(candidate.reply, previousTutorReplies ? previousTutorReplies.split("\n- ").filter(Boolean) : [])) {
+              const antiRepeatPrompt = `${prompt}
+
+IMPORTANT REGENERATION:
+Your first draft was too similar to a recent tutor reply. Discard it completely.
+Write a fresh response with different wording and sentence structure. React to the learner's latest meaning and advance the conversation naturally. Do not reuse the same opening, question, or sentence pattern. Return only the required JSON.`;
+
+              const regenerated = await ai.models.generateContent({
+                model: modelName,
+                contents: antiRepeatPrompt,
+                config: {
+                  systemInstruction,
+                  temperature: 1.0,
+                  responseMimeType: "application/json",
+                  responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                      reply: { type: Type.STRING },
+                      pinyin: { type: Type.STRING },
+                      translation: { type: Type.STRING },
+                      question: { type: Type.STRING },
+                      hasCorrection: { type: Type.BOOLEAN },
+                      correction: { type: Type.OBJECT, properties: {
+                        original: { type: Type.STRING }, corrected: { type: Type.STRING },
+                        pinyin: { type: Type.STRING }, explanation: { type: Type.STRING },
+                        errorType: { type: Type.STRING }
+                      }},
+                      suggestions: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
+                        zh: { type: Type.STRING }, py: { type: Type.STRING },
+                        vi: { type: Type.STRING }, type: { type: Type.STRING }
+                      }}},
+                      vocabulary: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
+                        word: { type: Type.STRING }, pinyin: { type: Type.STRING },
+                        meaning: { type: Type.STRING }, exampleSentence: { type: Type.STRING },
+                        examplePinyin: { type: Type.STRING }, exampleTranslation: { type: Type.STRING },
+                        hskLevel: { type: Type.STRING }, partOfSpeech: { type: Type.STRING },
+                        reason: { type: Type.STRING }, priority: { type: Type.STRING }
+                      }}},
+                      difficultyFeedback: { type: Type.STRING },
+                      difficulty: { type: Type.STRING }
+                    },
+                    required: ["reply", "pinyin", "translation", "vocabulary", "suggestions"]
+                  }
+                }
+              });
+              if (regenerated?.text) response = regenerated;
+            }
+          } catch {
+            // If the first response is not parseable, the normal validation below handles it.
+          }
+          break;
+        }
       } catch (e) {
         lastError = e;
         console.warn(`Model ${modelName} call failed, trying next candidate:`, e);
