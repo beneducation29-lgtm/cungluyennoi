@@ -21,7 +21,7 @@ export const QuickRepliesBar: React.FC<QuickRepliesBarProps> = ({
   difficultyFeedback,
   disabled = false,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showRecoveryDrawer, setShowRecoveryDrawer] = useState(false);
 
   // Survival rescue phrases when student completely freezes or forgets words
