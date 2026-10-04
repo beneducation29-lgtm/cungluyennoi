@@ -208,7 +208,7 @@ class GeminiService {
       if (alternative) {
         fallback.reply = alternative;
         fallback.pinyin = alternative === alternatives[0]
-          ? "Ń, wǒ míngbái nǐ de yìsi le. Nǐ kěyǐ zài gàosu wǒ yìdiǎn xìjié ma? Wǒ hěn xiǎng tīngting nǐ de xiǎngfǎ."
+          ? "En, wǒ míngbái nǐ de yìsi le. Nǐ kěyǐ zài gàosu wǒ yìdiǎn xìjié ma? Wǒ hěn xiǎng tīngting nǐ de xiǎngfǎ."
           : alternative === alternatives[1]
           ? "Yuánlái shì zhèyàng! Zhège huídá ràng wǒ yǒudiǎn hǎoqí. Nǐ wèishénme huì zhème xiǎng ne?"
           : "Tīng qǐlái hěn yǒuyìsi. Wǒmen huàn yí ge jiǎodù liáoliáo, nǐ juéde zuì tèbié de dìfang shì shénme?";
