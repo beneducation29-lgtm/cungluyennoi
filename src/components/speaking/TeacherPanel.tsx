@@ -21,6 +21,15 @@ export const TeacherPanel: React.FC<TeacherPanelProps> = ({
 }) => {
   const speeds = [0.75, 1.0, 1.25, 1.5];
 
+  const avatarStateClass =
+    micState === "AI_SPEAKING"
+      ? "ring-4 ring-indigo-200 shadow-[0_12px_36px_rgba(79,70,229,0.22)] scale-[1.015]"
+      : micState === "PROCESSING"
+      ? "ring-4 ring-amber-100 shadow-[0_10px_30px_rgba(245,158,11,0.16)]"
+      : micState === "LISTENING"
+      ? "ring-4 ring-rose-100 shadow-[0_10px_30px_rgba(244,63,94,0.14)]"
+      : "shadow-md";
+
   const getStatusBadge = () => {
     const s = String(micState).toUpperCase().replace("-", "_");
     switch (s) {
@@ -74,9 +83,9 @@ export const TeacherPanel: React.FC<TeacherPanelProps> = ({
           <img
             src={teacher.avatar}
             alt={teacher.name}
-            className="w-44 h-56 sm:w-48 sm:h-60 rounded-[1.75rem] object-cover object-[center_top] border-2 border-indigo-200 shadow-md bg-slate-100 transition-transform duration-500 hover:scale-[1.01]"
+            className={`w-44 h-56 sm:w-48 sm:h-60 rounded-[1.75rem] object-cover object-[center_top] border-2 border-indigo-200 bg-slate-100 transition-all duration-500 ${avatarStateClass}`}
           />
-          <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-indigo-600 text-white shadow-xs">
+          <div className={`absolute -bottom-1 -right-1 p-1 rounded-lg text-white shadow-xs transition-colors ${micState === "AI_SPEAKING" ? "bg-indigo-600" : micState === "PROCESSING" ? "bg-amber-500" : micState === "LISTENING" ? "bg-rose-500" : "bg-slate-500"}`}>
             <Sparkles className="w-3 h-3" />
           </div>
         </div>
