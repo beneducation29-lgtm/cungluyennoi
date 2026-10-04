@@ -142,6 +142,8 @@ ${previousTutorReplies ? "- " + previousTutorReplies : "(None yet)"}
 
 Student says: "${studentMessage}"
 
+Before returning JSON, compare your planned reply against Recent Tutor Replies. If it is identical or nearly identical, discard it and produce a genuinely different natural reaction or follow-up grounded in the learner's latest message.
+
 Respond as ${teacherName} in valid JSON matching the schema:`;
 
     let response;
