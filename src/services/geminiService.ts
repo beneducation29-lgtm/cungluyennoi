@@ -77,7 +77,39 @@ class GeminiService {
 
     // If Demo Mode forced by user, return local deterministic scenario simulation immediately
     if (forceDemo) {
-      return this.simulateDemoReply(studentMessage, topic, teacher, level);
+      const fallback = this.simulateDemoReply(studentMessage, topic, teacher, level);
+      const recent = this.recentDemoReplies;
+      if (recent.includes(fallback.reply)) {
+        const alternatives = [
+          {
+            reply: "嗯，我听懂了。这个话题还挺有意思的，你愿意再说一点吗？",
+            pinyin: "En, wǒ tīng dǒng le. Zhège huàtí hái tǐng yǒuyìsi de, nǐ yuànyì zài shuō yìdiǎn ma?",
+            translation: "Ừ, cô hiểu rồi. Chủ đề này khá thú vị đấy, em muốn kể thêm một chút không?",
+          },
+          {
+            reply: "哦，原来你是这样想的。那如果换一种情况，你会怎么选择呢？",
+            pinyin: "Ó, yuánlái nǐ shì zhèyàng xiǎng de. Nà rúguǒ huàn yì zhǒng qíngkuàng, nǐ huì zěnme xuǎnzé ne?",
+            translation: "Ồ, ra là em nghĩ như vậy. Nếu đổi sang một tình huống khác thì em sẽ chọn thế nào?",
+          },
+          {
+            reply: "听起来不错！我有点好奇，你最喜欢这里的哪一点？",
+            pinyin: "Tīng qǐlái búcuò! Wǒ yǒudiǎn hǎoqí, nǐ zuì xǐhuan zhèlǐ de nǎ yì diǎn?",
+            translation: "Nghe hay đấy! Cô hơi tò mò, em thích nhất điểm nào ở đây?",
+          },
+        ].find((item) => !recent.includes(item.reply));
+
+        if (alternatives) {
+          fallback.reply = alternatives.reply;
+          fallback.pinyin = alternatives.pinyin;
+          fallback.translation = alternatives.translation;
+          fallback.question = alternatives.reply.includes("？")
+            ? alternatives.reply.slice(alternatives.reply.lastIndexOf("？") - 30).trim()
+            : "";
+          fallback.suggestions = [];
+        }
+      }
+      this.recentDemoReplies = [...this.recentDemoReplies, fallback.reply].slice(-6);
+      return fallback;
     }
 
     try {
