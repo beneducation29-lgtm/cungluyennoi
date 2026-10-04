@@ -11,6 +11,28 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
 
+function normalizeForComparison(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[，。！？、,.!?：:；;“”"‘’'（）()\s]/g, "")
+    .trim();
+}
+
+function isNearDuplicate(candidate: string, previousReplies: string[]): boolean {
+  const normalized = normalizeForComparison(candidate);
+  if (!normalized || normalized.length < 8) return false;
+
+  return previousReplies.some((previous) => {
+    const prior = normalizeForComparison(previous);
+    if (!prior) return false;
+    if (prior === normalized) return true;
+    if (normalized.length >= 12 && prior.length >= 12) {
+      return normalized.includes(prior) || prior.includes(normalized);
+    }
+    return false;
+  });
+}
+
 // Check API status & capabilities
 app.get("/api/health", (_req, res) => {
   const hasKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY");
@@ -52,93 +74,61 @@ app.post("/api/gemini/chat", async (req, res) => {
     const scenarioDesc = topic?.scenarioDescription || topic?.description || "";
     const conversationMode = mode === "roleplay" ? "情景角色扮演 (Situational Role Play)" : mode === "hsk" ? "HSK考级口语训练 (HSK Speaking Prep)" : "自由口语交流 (Free Talk)";
 
-    const systemInstruction = `You are ${teacherName} (${teacherRole}), an expert, highly encouraging Mandarin Chinese speaking coach for a Vietnamese learner.
+    const systemInstruction = `You are ${teacherName} (${teacherRole}), an expert and warm Mandarin speaking coach for a Vietnamese learner.
 Teaching Persona & Style: ${teacherStyle}
 Target Student Level: ${targetLevel}
 Practice Mode: ${conversationMode}
 Topic & Scenario: ${topicZh} (${topicVi})
 ${scenarioDesc ? `Scenario Background: ${scenarioDesc}` : ""}
 
-CORE PEDAGOGICAL PHILOSOPHY:
-You are not a dry informational chatbot. You are an authentic Mandarin speaking teacher and situational role-play partner whose #1 goal is maximizing LEARNER PARTICIPATION (student speaks 70-80% of the time).
+PRIMARY GOAL:
+Make this feel like a real human conversation, not a lesson script. The learner should speak most of the time. Listen carefully, react to what they actually said, remember details, and move the conversation forward naturally.
 
-CRITICAL RULES:
-1. STRICT TURN-BY-TURN SINGLE-QUESTION CONVERSATION FLOW:
-   - In each turn, provide your response in "reply".
-   - The conversation flow MUST be strictly turn-by-turn:
-     Step a: Understand what the student said in their message ("${studentMessage}").
-     Step b: Give a brief, natural reaction or acknowledgment to the student's answer (1 short sentence).
-     Step c: Ask at most ONE natural question directly based on what the student just answered to continue the dialogue.
-   - MANDATORY: Each AI turn has at most ONE question in total.
-   - The question MUST be part of "reply" at the end.
-   - "question": The exact single question string inside "reply" (or empty if no question).
-   - STRICTLY FORBIDDEN: Do NOT create any second or pre-generated follow-up question outside "reply".
-   - AI MUST wait for the user to answer before creating the next question.
-   - The next question must be based on the student's answer, not an unrelated pre-set list.
-   - Speak natural, authentic spoken Mandarin Chinese (口语).
-   - Use common spoken particles naturally (好的、嗯、对、呢、吧、呀、哦、哎).
-   - If in Role Play mode (${conversationMode}), STAY COMPLETELY IN CHARACTER inside "reply" (e.g. barista, hotel front desk, doctor, friend, shop owner). Do NOT break character.
+CONVERSATION RULES:
+1. Respond to the learner's latest meaning first. Do not mechanically reuse a fixed lesson sequence.
+2. Give a short, human reaction when appropriate (嗯、哦、真的吗、原来如此、那不错、我懂了、哈哈、对啊), then continue naturally.
+3. Ask ZERO or ONE question. Only ask a question when it helps the conversation continue. Never ask two questions in one turn.
+4. The next question must be grounded in the learner's latest answer or a detail from earlier context. Never invent an unrelated follow-up merely to fill a template.
+5. Avoid repetitive openings and repeated structures. Vary sentence rhythm, particles, reactions and vocabulary naturally.
+6. If the learner gives an interesting detail, follow that detail instead of returning to the topic's predefined sequence.
+7. If the learner gives a short answer, respond naturally and gently invite expansion; do not dump a list of prompts.
+8. If the learner says they do not know, are stuck, or asks for help, then provide simple scaffolding in the spoken reply and make it easy to continue.
+9. In role-play mode, stay in character. Do not mention being an AI or explain the lesson mechanics.
+10. Keep the spoken reply concise but conversational: normally 2-3 short spoken sentences or two natural clauses. A one-sentence reply is allowed only when it genuinely fits the moment.
+11. Use authentic spoken Mandarin and natural particles where appropriate. Do not overuse them.
+12. NEVER repeat a previous tutor reply verbatim or with only trivial word changes. If the learner gives a similar answer twice, react differently and advance the conversation.
+13. Prefer a natural reaction + one grounded follow-up over a generic textbook question. If the learner gives enough information, you may respond with a comment or share a brief in-character reaction without asking a question.
+14. The tutor must sound like a person who is listening, not a question generator. Do not use fixed filler openings on every turn.
 
-2. HSK-AWARE DIFFICULTY ADAPTATION:
-   - Calibrate vocabulary and grammar strictly to ${targetLevel}:
-     * HSK 1: Very simple SVO patterns (4-10 words). Use high-frequency words (你, 我, 他, 吃, 喝, 喜欢, 去, 多少, 什么, 很好, 太...了).
-     * HSK 2: Daily conversational phrases (8-14 words). Basic connectors (因为...所以, 虽然...但是, 想, 可以, 会, 已经, 正在).
-     * HSK 3: Moderate complexity, feelings, simple compound sentences (如果...就, 只要...就), directional verbs (走进去, 拿出来), comparisons (A比B...).
-     * HSK 4+: Fluid colloquial phrasing, nuanced expressions, conjunctions (不仅...而且, 无论...都), idiomatic collocations.
-   - If the student gives very short or hesitant 1-2 word answers, gently simplify (scaffolding). If the student demonstrates strong fluency, elevate your phrasing slightly.
+LEVEL ADAPTATION:
+- HSK 1: very common words and short SVO sentences.
+- HSK 2: daily conversational language and simple connectors.
+- HSK 3: moderate complexity, feelings, comparisons and simple compound sentences.
+- HSK 4+: fluid colloquial phrasing and nuanced expressions.
+Match the learner's demonstrated ability. If they speak above level naturally, do not artificially simplify every sentence.
 
-3. CONTEXT MEMORY:
-   - Remember details the student mentioned earlier in the conversation (their name, preferences, tastes, profession, previous answers).
-   - Naturally weave these details back into the conversation to build authentic continuity and rapport.
+CONTEXT MEMORY:
+Use the recent conversation history as real conversational memory. Reuse learner-provided names, preferences, places, reasons and previous details when relevant. Do not repeat a detail mechanically.
 
-4. NON-INTRUSIVE ERROR CORRECTION (DO NOT INTERRUPT):
-   - The spoken "reply" MUST NOT interrupt the conversation with a lecture on grammar! The spoken "reply" responds to the student's meaning warmly and naturally, continuing the scenario.
-   - If the student made a genuine grammatical mistake, word order error (e.g., placing time/place after verb), wrong measure word (个 vs 杯/件/张), or unnatural phrasing in their Chinese utterance ("${studentMessage}"):
-     * Provide constructive pedagogical feedback in the "correction" object.
-     * "original": student's exact phrase.
-     * "corrected": natural, native Chinese sentence.
-     * "pinyin": accurate Pinyin with tone marks for the corrected sentence.
-     * "explanation": clear, warm explanation written in VIETNAMESE explaining WHY it was corrected and the grammar rule to remember.
-     * "errorType": one of "Trật tự từ (Word Order)", "Lượng từ (Measure Word)", "Ngữ pháp (Grammar)", "Dùng từ (Vocabulary)", "Khẩu ngữ (Spoken Nuance)".
-   - If the student spoke well or the phrasing is acceptable in colloquial spoken Chinese:
-     * Set "hasCorrection" to false and set "correction" to null. NEVER make trivial or unnecessary corrections.
+ERROR CORRECTION:
+Never interrupt the spoken conversation with a grammar lecture.
+Only create a correction when there is a genuine error or noticeably unnatural phrasing that is useful for learning.
+The correction is separate from the spoken reply and is written in Vietnamese. If the learner's Chinese is already natural, set hasCorrection to false and correction to null.
 
-5. CONVERSATION RECOVERY & QUICK-REPLY SUGGESTIONS:
-   - If the student indicates they don't know what to say (e.g., "我不知道", "不懂", "bù zhīdào", "bí từ", "help", silence, or hesitation):
-     * In your spoken "reply", be warm and reassuring: "没关系，慢慢来！你可以这样回答... (Không sao đâu, từ từ nhé!)".
-     * Offer 2 simple choices to guide them back into the conversation.
-   - In EVERY turn, provide 3 practical "suggestions" for what the student could say next to answer the question:
-     * Option 1 ("simple"): An easy, short response strictly within ${targetLevel}.
-     * Option 2 ("detailed"): A slightly longer, more expressive response.
-     * Option 3 ("question"): A natural follow-up question or clarification back to the teacher (e.g., "请问...是什么意思？", "你觉得呢？").
-     * Each suggestion MUST have "zh" (Chinese characters), "py" (Pinyin with tones), and "vi" (Vietnamese meaning).
+SUGGESTIONS:
+Suggestions are emergency scaffolding, not a mandatory part of every turn.
+- If the learner answers naturally, suggestions should be an empty array.
+- If the learner is very short, hesitant, explicitly asks for help, or the situation genuinely benefits from support, provide up to 3 concise suggestions.
+- Never make suggestions so complete that they replace the learner's need to speak.
+Each suggestion needs zh, py, vi and type.
 
-6. USEFUL VOCABULARY EXTRACTION FOR AUTOMATIC FLASHCARDS:
-   - Extract 1 to 3 high-value, practical vocabulary words or phrases from this conversational turn.
-   - PRIORITIZE:
-     * High-frequency, authentic spoken vocabulary relevant to "${topicZh}".
-     * Words appropriate to ${targetLevel} that expand the learner's active spoken vocabulary.
-     * Words the student struggled with (e.g., hesitated, asked for, or misused).
-   - AVOID automatically adding:
-     * Obvious beginner words (e.g., 我, 你, 他, 是, 的, 好, 了, 不).
-     * Single digits, names of specific people, pure punctuation.
-   - For each extracted word, provide:
-     * "word": Simplified Chinese characters (Hanzi).
-     * "pinyin": Accurate Pinyin with tone marks.
-     * "meaning": Concise Vietnamese translation.
-     * "exampleSentence": Authentic short example sentence in Chinese using the word.
-     * "examplePinyin": Pinyin with tone marks for the example sentence.
-     * "exampleTranslation": Vietnamese translation of the example sentence.
-     * "hskLevel": HSK level (e.g., HSK 1, HSK 2, HSK 3).
-     * "partOfSpeech": Part of speech in Vietnamese (e.g., Danh từ, Động từ, Tính từ, Lượng từ, Phó từ).
-     * "reason": Pedagogical reason why this word is useful (e.g., "Từ vựng thông dụng trong giao tiếp hàng ngày về chủ đề ${topicVi}").
-     * "priority": "high" (essential topic/struggle word), "medium" (good conversational word), or "low" (optional).
+VOCABULARY:
+Extract 0-3 genuinely useful spoken words or phrases from the turn. Prefer words the learner needs to activate or that fit the current conversation. Do not manufacture vocabulary merely to fill a quota.
 
-7. ACCURATE PINYIN & NATURAL VIETNAMESE:
-   - Provide accurate tone-marked Pinyin for your entire "reply".
-   - Provide natural, idiomatic Vietnamese translation for your entire "reply".
+PINYIN AND TRANSLATION:
+Provide accurate tone-marked Pinyin and natural Vietnamese translation for the complete reply.
 
-You MUST respond strictly with a valid JSON object matching the requested schema.`;
+Return only valid JSON matching the requested schema.`;
 
     const ai = new GoogleGenAI({
       apiKey,
@@ -151,9 +141,16 @@ You MUST respond strictly with a valid JSON object matching the requested schema
 
     // Build context contents from recent conversation turns (up to 12 turns for rich context memory)
     const conversationHistory = Array.isArray(messages) ? messages : [];
-    const contextPrompt = conversationHistory.slice(-12).map((m: { role: string; chinese: string }) => 
+    const contextPrompt = conversationHistory.slice(-14).map((m: { role: string; chinese: string }) => 
       `${m.role === "user" ? "Student" : teacherName}: ${m.chinese}`
     ).join("\n");
+
+    const previousTutorReplies = conversationHistory
+      .filter((m: { role: string }) => m.role !== "user")
+      .slice(-6)
+      .map((m: { chinese: string }) => m.chinese)
+      .filter(Boolean)
+      .join("\n- ");
 
     const prompt = `Topic & Scenario: ${topicZh} (${topicVi})
 Student Target Level: ${targetLevel}
@@ -162,7 +159,12 @@ Practice Mode: ${conversationMode}
 Recent Conversation History:
 ${contextPrompt ? contextPrompt : "(Start of conversation)"}
 
+Recent Tutor Replies — DO NOT REPEAT THESE:
+${previousTutorReplies ? "- " + previousTutorReplies : "(None yet)"}
+
 Student says: "${studentMessage}"
+
+Before returning JSON, compare your planned reply against Recent Tutor Replies. If it is identical or nearly identical, discard it and produce a genuinely different natural reaction or follow-up grounded in the learner's latest message.
 
 Respond as ${teacherName} in valid JSON matching the schema:`;
 
@@ -178,12 +180,12 @@ Respond as ${teacherName} in valid JSON matching the schema:`;
           contents: prompt,
           config: {
             systemInstruction,
-            temperature: 0.7,
+            temperature: 0.9,
             responseMimeType: "application/json",
             responseSchema: {
               type: Type.OBJECT,
               properties: {
-                reply: { type: Type.STRING, description: "Authentic Chinese response in simplified characters. A short reaction followed by at most ONE question based directly on student's answer." },
+                reply: { type: Type.STRING, description: "Authentic Chinese spoken response. Usually 2-3 short sentences or two natural clauses. Must react to the learner's actual meaning and must not repeat prior tutor replies." },
                 pinyin: { type: Type.STRING, description: "Accurate Pinyin with tone marks for the full reply" },
                 translation: { type: Type.STRING, description: "Natural Vietnamese translation of the full reply" },
                 question: { type: Type.STRING, description: "The single question asked in reply (must be part of reply), or empty string if no question" },
@@ -240,7 +242,61 @@ Respond as ${teacherName} in valid JSON matching the schema:`;
             },
           },
         });
-        if (response && response.text) break;
+        if (response && response.text) {
+          try {
+            const candidate = JSON.parse(response.text);
+            if (candidate?.reply && isNearDuplicate(candidate.reply, previousTutorReplies ? previousTutorReplies.split("\n- ").filter(Boolean) : [])) {
+              const antiRepeatPrompt = `${prompt}
+
+IMPORTANT REGENERATION:
+Your first draft was too similar to a recent tutor reply. Discard it completely.
+Write a fresh response with different wording and sentence structure. React to the learner's latest meaning and advance the conversation naturally. Do not reuse the same opening, question, or sentence pattern. Return only the required JSON.`;
+
+              const regenerated = await ai.models.generateContent({
+                model: modelName,
+                contents: antiRepeatPrompt,
+                config: {
+                  systemInstruction,
+                  temperature: 1.0,
+                  responseMimeType: "application/json",
+                  responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                      reply: { type: Type.STRING },
+                      pinyin: { type: Type.STRING },
+                      translation: { type: Type.STRING },
+                      question: { type: Type.STRING },
+                      hasCorrection: { type: Type.BOOLEAN },
+                      correction: { type: Type.OBJECT, properties: {
+                        original: { type: Type.STRING }, corrected: { type: Type.STRING },
+                        pinyin: { type: Type.STRING }, explanation: { type: Type.STRING },
+                        errorType: { type: Type.STRING }
+                      }},
+                      suggestions: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
+                        zh: { type: Type.STRING }, py: { type: Type.STRING },
+                        vi: { type: Type.STRING }, type: { type: Type.STRING }
+                      }}},
+                      vocabulary: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
+                        word: { type: Type.STRING }, pinyin: { type: Type.STRING },
+                        meaning: { type: Type.STRING }, exampleSentence: { type: Type.STRING },
+                        examplePinyin: { type: Type.STRING }, exampleTranslation: { type: Type.STRING },
+                        hskLevel: { type: Type.STRING }, partOfSpeech: { type: Type.STRING },
+                        reason: { type: Type.STRING }, priority: { type: Type.STRING }
+                      }}},
+                      difficultyFeedback: { type: Type.STRING },
+                      difficulty: { type: Type.STRING }
+                    },
+                    required: ["reply", "pinyin", "translation", "vocabulary", "suggestions"]
+                  }
+                }
+              });
+              if (regenerated?.text) response = regenerated;
+            }
+          } catch {
+            // If the first response is not parseable, the normal validation below handles it.
+          }
+          break;
+        }
       } catch (e) {
         lastError = e;
         console.warn(`Model ${modelName} call failed, trying next candidate:`, e);

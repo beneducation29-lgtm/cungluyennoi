@@ -43,11 +43,14 @@ export default function App() {
         // Automatically default to demo mode if no key configured
         setUserProfile((prev) => ({ ...prev, isDemoMode: true }));
       } else {
-        // When Gemini key is active, ensure user is in AI Mode by default unless they manually toggle
+        // Gemini is available: Live AI must be the default.
+        // Older builds could persist isDemoMode=true and silently force every turn
+        // through the deterministic demo simulator, making the tutor appear repetitive.
         const stored = storageService.getUserProfile();
-        if (stored.isDemoMode === undefined || stored.isDemoMode === false) {
-          setUserProfile((prev) => ({ ...prev, isDemoMode: false }));
+        if (stored.isDemoMode !== false) {
+          storageService.saveUserProfile({ isDemoMode: false });
         }
+        setUserProfile((prev) => ({ ...prev, isDemoMode: false }));
       }
     });
   }, []);
