@@ -72,8 +72,11 @@ CONVERSATION RULES:
 7. If the learner gives a short answer, respond naturally and gently invite expansion; do not dump a list of prompts.
 8. If the learner says they do not know, are stuck, or asks for help, then provide simple scaffolding in the spoken reply and make it easy to continue.
 9. In role-play mode, stay in character. Do not mention being an AI or explain the lesson mechanics.
-10. Keep the spoken reply concise: normally 1-3 short spoken sentences. The goal is turn-taking, not an essay.
+10. Keep the spoken reply concise but conversational: normally 2-3 short spoken sentences or two natural clauses. A one-sentence reply is allowed only when it genuinely fits the moment.
 11. Use authentic spoken Mandarin and natural particles where appropriate. Do not overuse them.
+12. NEVER repeat a previous tutor reply verbatim or with only trivial word changes. If the learner gives a similar answer twice, react differently and advance the conversation.
+13. Prefer a natural reaction + one grounded follow-up over a generic textbook question. If the learner gives enough information, you may respond with a comment or share a brief in-character reaction without asking a question.
+14. The tutor must sound like a person who is listening, not a question generator. Do not use fixed filler openings on every turn.
 
 LEVEL ADAPTATION:
 - HSK 1: very common words and short SVO sentences.
@@ -116,9 +119,16 @@ Return only valid JSON matching the requested schema.`;
 
     // Build context contents from recent conversation turns (up to 12 turns for rich context memory)
     const conversationHistory = Array.isArray(messages) ? messages : [];
-    const contextPrompt = conversationHistory.slice(-12).map((m: { role: string; chinese: string }) => 
+    const contextPrompt = conversationHistory.slice(-14).map((m: { role: string; chinese: string }) => 
       `${m.role === "user" ? "Student" : teacherName}: ${m.chinese}`
     ).join("\n");
+
+    const previousTutorReplies = conversationHistory
+      .filter((m: { role: string }) => m.role !== "user")
+      .slice(-6)
+      .map((m: { chinese: string }) => m.chinese)
+      .filter(Boolean)
+      .join("\n- ");
 
     const prompt = `Topic & Scenario: ${topicZh} (${topicVi})
 Student Target Level: ${targetLevel}
@@ -126,6 +136,9 @@ Practice Mode: ${conversationMode}
 
 Recent Conversation History:
 ${contextPrompt ? contextPrompt : "(Start of conversation)"}
+
+Recent Tutor Replies — DO NOT REPEAT THESE:
+${previousTutorReplies ? "- " + previousTutorReplies : "(None yet)"}
 
 Student says: "${studentMessage}"
 
@@ -143,12 +156,12 @@ Respond as ${teacherName} in valid JSON matching the schema:`;
           contents: prompt,
           config: {
             systemInstruction,
-            temperature: 0.7,
+            temperature: 0.9,
             responseMimeType: "application/json",
             responseSchema: {
               type: Type.OBJECT,
               properties: {
-                reply: { type: Type.STRING, description: "Authentic Chinese response in simplified characters. A short reaction followed by at most ONE question based directly on student's answer." },
+                reply: { type: Type.STRING, description: "Authentic Chinese spoken response. Usually 2-3 short sentences or two natural clauses. Must react to the learner's actual meaning and must not repeat prior tutor replies." },
                 pinyin: { type: Type.STRING, description: "Accurate Pinyin with tone marks for the full reply" },
                 translation: { type: Type.STRING, description: "Natural Vietnamese translation of the full reply" },
                 question: { type: Type.STRING, description: "The single question asked in reply (must be part of reply), or empty string if no question" },
