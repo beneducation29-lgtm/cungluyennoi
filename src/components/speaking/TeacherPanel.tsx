@@ -69,12 +69,12 @@ export const TeacherPanel: React.FC<TeacherPanelProps> = ({
       className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col gap-5 shadow-xs"
     >
       {/* Teacher Profile Header */}
-      <div className="flex items-center gap-3.5">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="relative">
           <img
             src={teacher.avatar}
             alt={teacher.name}
-            className="w-28 h-36 rounded-2xl object-cover border-2 border-indigo-200 shadow-sm"
+            className="w-44 h-56 sm:w-48 sm:h-60 rounded-[1.75rem] object-cover object-[center_top] border-2 border-indigo-200 shadow-md bg-slate-100 transition-transform duration-500 hover:scale-[1.01]"
           />
           <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-indigo-600 text-white shadow-xs">
             <Sparkles className="w-3 h-3" />
